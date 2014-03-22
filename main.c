@@ -88,16 +88,16 @@ int topo(const void *a, const void *b)
     const unsigned char *sb = *(unsigned char **)b;
     while (*sa && *sb) {
         unsigned char ca, cb;
-        if (*sa == 1)
-            ca = '/';
-        else if (*sa <= '/')
+        if (*sa == '/')
+            ca = 1;
+        else if (*sa < '/')
             ca = *sa - 1;
         else
             ca = *sa;
 
-        if (*sb == 1)
-            cb = '/';
-        else if (*sb <= '/')
+        if (*sb == '/')
+            cb = 1;
+        else if (*sb < '/')
             cb = *sb - 1;
         else
             cb = *sb;
