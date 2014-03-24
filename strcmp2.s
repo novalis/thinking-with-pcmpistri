@@ -1,40 +1,34 @@
-        .global strcmp2
+# This is a simple version of a qsort-ready strcmp written in assembly
+# just for testing. Because it's designed for qsort, it dereferences
+# the pointer arguments
+
+        .global simple_asm_strcmp
 
         .text
-strcmp2:
+simple_asm_strcmp:
+        mov (%rdi), %rdi
+        mov (%rsi), %rsi
+        xor %rax, %rax
+        xor %rdx, %rdx
 
 loop_start:
-        mov $0, %rax
-        cmp %al, (%rdi)
+        movb (%rsi), %dl
+        movb (%rdi), %al
+        
+        cmpb $0, %dl
         je done_loop
 
-        cmp %al, (%rsi)
-        je b_smaller
+        cmpb $0, %al
+        je done_loop
 
-        movb (%rsi), %al
         # a - b
-        cmpb %al, (%rdi)
-        jl a_smaller
-        jg b_smaller
+        cmpb %al, %dl
+        jne done_loop
 
         inc %rsi
         inc %rdi
         jmp loop_start
-        
+
 done_loop:
-        # a == 0, so what about b
-        movb (%rsi), %al
-        cmpb $0, %al
-        je equal
-        
-
-a_smaller:
-        mov $-1, %rax
-        ret
-b_smaller:
-        mov $1, %rax
-        ret
-
-equal:
-        mov $0, %rax
+        sub %rdx, %rax
         ret

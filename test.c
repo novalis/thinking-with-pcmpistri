@@ -2,47 +2,64 @@
 #include <stdio.h>
 #include <string.h>
 
-int topo_sse2(const void *a, const void *b);
+/* put the string at the end of a block, so that we can make sure the
+ * block-boundary code works */
+
+char *xstrndup(const char* s) {
+    const int SIZE = 4088;
+    int len = strlen(s);
+    char *ret = malloc(SIZE);
+    strcpy(ret + SIZE - (len + 1), s);
+    return ret + SIZE - (len + 1);
+}
+
+int topo_sse(const void *a, const void *b);
 int main(int argc, char** argv) {
-    char *tilde = strdup(".git/COMMIT_EDITMSG~");
-    char *notilde = strdup(".git/COMMIT_EDITMSG");
+    char *tilde = ".git/COMMIT_EDITMSG~";
+    char *notilde = ".git/COMMIT_EDITMSG";
 
-    char *dir = strdup("dir");
-    char *subdir = strdup("dir/fleem");
-    char *nondira = strdup("dir-fleem");
-    char *nondirb = strdup("dir=fleem");
+    char *dir = "dir";
+    char *subdir = "dir/fleem";
+    char *nondira = "dir-fleem";
+    char *nondirb = "dir=fleem";
 
-    char *data1 = strdup(".git/COMMIT_EDITMSG");
-    char *data2 = strdup("samples/kprobes");
+    char *data1 = ".git/COMMIT_EDITMSG";
+    char *data2 = "samples/kprobes";
 
-    char* data3 = strdup("Documentation/arm/Samsung/GPIO.txt");
-    char* data4 = strdup("Documentation/arm/Samsung-S3C24XX");
+    char* data3 = "Documentation/arm/Samsung/GPIO.txt";
+    char* data4 = "Documentation/arm/Samsung-S3C24XX";
 
-    assert(topo_sse2(&data3, &data4) == -1);
-    assert(topo_sse2(&data4, &data3) == 1);
+    char *a = "abcdefgh012347";
+    char *b = "abcdefgh01234X";
 
-    assert(topo_sse2(&data2, &data1) == 1);
-    assert(topo_sse2(&data1, &data2) == -1);
+    char *pack = xstrndup(".git/objects/pack/pack-3c2034acfef6c89728776a312378209d290c7094.pack");
+    char *idx = xstrndup(".git/objects/pack/pack-3c2034acfef6c89728776a312378209d290c7094.idx");
 
-    assert(topo_sse2(&nondira, &subdir) == 1);
-    assert(topo_sse2(&subdir, &nondira) == -1);
+    assert(topo_sse(&idx, &pack) < 0);
+    assert(topo_sse(&pack, &idx) > 0);
 
-    assert(topo_sse2(&nondirb, &subdir) == 1);
-    assert(topo_sse2(&subdir, &nondirb) == -1);
+    assert(topo_sse(&data3, &data4) < 0);
+    assert(topo_sse(&data4, &data3) > 0);
+    assert(topo_sse(&data4, &data4) == 0);
 
-    assert(topo_sse2(&subdir, &dir) == 1);
-    assert(topo_sse2(&dir, &subdir) == -1);
-    assert(topo_sse2(&dir, &dir) == 0);
+    assert(topo_sse(&data2, &data1) > 0);
+    assert(topo_sse(&data1, &data2) < 0);
 
-    assert(topo_sse2(&tilde, &notilde) == 1);
-    assert(topo_sse2(&notilde, &tilde) == -1);
+    assert(topo_sse(&nondira, &subdir) > 0);
+    assert(topo_sse(&subdir, &nondira) < 0);
 
+    assert(topo_sse(&nondirb, &subdir) > 0);
+    assert(topo_sse(&subdir, &nondirb) < 0);
 
-    char *a = strdup("abcdefgh012347");
-    char *b = strdup("abcdefgh01234X");
+    assert(topo_sse(&subdir, &dir) > 0);
+    assert(topo_sse(&dir, &subdir) < 0);
+    assert(topo_sse(&dir, &dir) == 0);
 
-    assert(topo_sse2(&a, &a) == 0);
-    assert(topo_sse2(&a, &b) == -1);
-    assert(topo_sse2(&b, &a) == 1);
+    assert(topo_sse(&tilde, &notilde) > 0);
+    assert(topo_sse(&notilde, &tilde) < 0);
+
+    assert(topo_sse(&a, &a) == 0);
+    assert(topo_sse(&a, &b) < 0);
+    assert(topo_sse(&b, &a) > 0);
 
 }

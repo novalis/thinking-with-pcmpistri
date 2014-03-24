@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-
+#define SHOULD_PRINT 0
 
 void die_errno(char *message, ...)
 {
@@ -73,7 +73,7 @@ char **load(char *path, int *count)
 
 enum mode {
     MODE_PLAIN,
-    MODE_STUPID_ASM,
+    MODE_SIMPLE_ASM,
 
     MODE_TOPO,
     MODE_TOPO_TABLE,
@@ -153,18 +153,9 @@ int plain(const void *a, const void *b)
     return strcmp(sa, sb);
 }
 
-int strcmp2(const char *a, const char *b);
+int simple_asm_strcmp(const void *a, const void *b);
 
-int stupid_asm(const void *a, const void *b)
-{
-    const char *sa = *(char **)a;
-    const char *sb = *(char **)b;
-    return strcmp2(sa, sb);
-}
-
-#define SHOULD_PRINT 0
-
-int topo_sse2(const void *a, const void *b);
+int topo_sse(const void *a, const void *b);
 
 int main(int argc, char** argv) {
     int count;
@@ -180,10 +171,14 @@ int main(int argc, char** argv) {
             mode = MODE_TOPO;
         else if (!strcmp(argv[1], "topo_table"))
             mode = MODE_TOPO_TABLE;
-        else if (!strcmp(argv[1], "stupid"))
-            mode = MODE_STUPID_ASM;
+        else if (!strcmp(argv[1], "simple"))
+            mode = MODE_SIMPLE_ASM;
         else if (!strcmp(argv[1], "asm"))
             mode = MODE_TOPO_ASM;
+        else {
+            fprintf(stderr, "Unknown algorithm %s\n", argv[1]);
+            exit(1);
+        }
     }
 
     for (int i = 0; i < 10; ++i) {
@@ -202,12 +197,12 @@ int main(int argc, char** argv) {
             qsort(dup, count, sizeof(char*), topo_table);
             break;
 
-        case MODE_STUPID_ASM:
-            qsort(dup, count, sizeof(char*), stupid_asm);
+        case MODE_SIMPLE_ASM:
+            qsort(dup, count, sizeof(char*), simple_asm_strcmp);
             break;
 
         case MODE_TOPO_ASM:
-            qsort(dup, count, sizeof(char*), topo_sse2);
+            qsort(dup, count, sizeof(char*), topo_sse);
             break;
         }
         if (i == 0 && SHOULD_PRINT)

@@ -1,4 +1,6 @@
 *~
 *.o
 core
-files
+vgcore.*
+main
+test
