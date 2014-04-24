@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define SHOULD_PRINT 0
+#define SHOULD_PRINT 1
 
 void die_errno(char *message, ...)
 {
@@ -91,14 +91,14 @@ int topo(const void *a, const void *b)
         if (*sa == '/')
             ca = 1;
         else if (*sa < '/')
-            ca = *sa - 1;
+            ca = *sa + 1;
         else
             ca = *sa;
 
         if (*sb == '/')
             cb = 1;
         else if (*sb < '/')
-            cb = *sb - 1;
+            cb = *sb + 1;
         else
             cb = *sb;
 
