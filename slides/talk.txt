@@ -1,5 +1,7 @@
 (The problem)
 
+Hi!  I'm David Turner and I love programming.
+
 Recently, I wanted to sort a list of paths. There was a constraint:
 the paths had to be sorted topologically, so that foo comes before
 foo/bar comes before foo/bar/baz, and nothing comes in between foo and
@@ -46,9 +48,9 @@ store data that they are working on in registers -- these are
 basically your processor's version of variables.  Ordinarily, one
 variable holds one value; on a 64-bit processor, that's a single
 64-bit value.  But with SIMD instructions, a register can be treated
-as an array of independent values.  For example, you could treat 64
-bits as eight 8-bit bytes, or four 16-bit words, or two 32-bit
-integers.  The nice thing about this is that each value in a SIMD
+as an array of independent values.  For example, you could treat 128
+bits as four 32-bit integers, or eight 16-bit words, or sixteen 8-bit
+bytes.  The nice thing about this is that each value in a SIMD
 register stays independent, so if for instance you're adding two
 vectors of bytes, and one of the bytes overflows, it doesn't carry
 into its neighbor.
