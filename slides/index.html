@@ -132,33 +132,14 @@ movdqa %xmm0, (%rdi)
 <section>
 <img src="movdqa-exploded.svg"><br/>
 <img src="four-pixels-data-only.svg"><br/>
-<tt style="float:left;text-align:left">
-<span style="color:#ff0000">movdqa (%rdi), %xmm0</span><br/>
-movdqa (%rsi), %xmm1<br/>
-paddusb %xmm1, %xmm0<br/>
-movdqa %xmm0, (%rdi)
-</tt>
 </section>
 
 <section>
-<img src="movdqa-exploded-2.svg"><br/>
 <img src="0x00404040004040400040404000404040.svg"><br/>
-<tt style="float:left;text-align:left">
-movdqa (%rdi), %xmm0<br/>
-<span style="color:#ff0000">movdqa (%rsi), %xmm1</span><br/>
-paddusb %xmm1, %xmm0<br/>
-movdqa %xmm0, (%rdi)
-</tt>
 </section>
 
 <section>
 <img src="paddusb.svg"><br/>
-<tt style="float:left;text-align:left">
-movdqa (%rdi), %xmm0<br/>
-movdqa (%rsi), %xmm1<br/>
-<span style="color:#ff0000">paddusb %xmm1, %xmm0</span><br/>
-movdqa %xmm0, (%rdi)
-</tt>
 </section>
 
 <section>
@@ -173,8 +154,7 @@ movdqa %xmm0, (%rdi)
 </h2>
 <tt style="float:left;text-align:left">
 movdqa (%rdi), %xmm0<br/>
-movdqa (%rsi), %xmm1<br/>
-paddusb %xmm1, %xmm0<br/>
+paddusb (%rsi), %xmm0<br/>
 <span style="color:#ff0000">movdqa %xmm0, (%rdi)</span>
 </tt>
 </section>
@@ -195,17 +175,18 @@ else
 </section>
 
 <section>
-	<pre>
-        compare char to '/'
-        jump to GT if greater-than flag is set
-        put 1 in register
-        jump to DONE
-GT:
-        put char in register
-DONE:
-       ...
 
-</pre>
+<table style="border:none">
+<tr>
+<td> IF
+<td><img src="mask/small_tree-mask.png" style="align:left;width:100%;border:none;vertical-align:middle"></td>
+<td> THEN </td>
+<td><img src="mask/small_tree.jpg" style="width:100%;border:none;vertical-align:middle"></td>
+<td> ELSE </td>
+<td><img src="mask/wall.jpg" style="align:right;width:100%;border:none;vertical-align:middle"></td>
+</tr>
+</table>
+
 </section>
 <section>
 <table style="border:none">
@@ -217,7 +198,7 @@ DONE:
 <td><img src="mask/small_tree-masked.jpg" style="align:right;width:100%;border:none;vertical-align:middle"></td>
 </tr>
 
-<tr>
+<tr class="fragment">
 <td><img src="mask/small_wall.jpg" style="align:left;width:100%;border:none;vertical-align:middle"></td>
 <td> AND </td>
 <td><img src="mask/small_tree-mask-inv.png" style="width:100%;border:none;vertical-align:middle"></td>
@@ -225,7 +206,7 @@ DONE:
 <td><img src="mask/small_wall-masked.jpg" style="align:right;width:100%;border:none;vertical-align:middle"></td>
 </tr>
 
-<tr>
+<tr class="fragment">
 <td><img src="mask/small_tree-masked.jpg" style="text-align:left;width:100%;border:none;vertical-align:middle"></td>
 <td>OR</td>
 <td><img src="mask/small_wall-masked.jpg" style="width:100%;border:none;vertical-align:middle"></td>
@@ -362,15 +343,27 @@ carry flag and zero flag get set<br/>
 </section>
 
 <section>
+<h2>pshufb</h2><br/>
+<img src="pshufb-example.svg">
+</section>
 
-<h2>Extracting a byte</h2>
+<section>
+<h2>Thank you</h2>
+</section>
+
+<section>
+
+<a href="http://commons.wikimedia.org/wiki/File:Bright_green_tree_-_Waikato.jpg">Tree image</a> by Floyd Wilde, <a href="http://creativecommons.org/licenses/by-sa/2.0/deed.en">CC-BY-SA</a>.
+<br/><br/>
+<a href="http://commons.wikimedia.org/wiki/File:Soderledskyrkan_brick_wall.jpg">Brick wall image</a> by Håkan Svensson (Xauxa), <a href="http://creativecommons.org/licenses/by-sa/3.0/deed.en">CC-BY-SA</a>
 
 </section>
 
 <section>
-<h2>pshufb</h2><br/>
-<img src="pshufb-example.svg">
+<h2>Bonus slide</h2>
+<h3>Extracting a byte</h3>
 </section>
+
 <section>
 xmm5<br>
 <img src="0xffffffffffffffffffffffffffffffff.svg"><br/>
@@ -395,17 +388,7 @@ xmm5<br>
 </p>
 </section>
 
-<section>
-<h2>Thank you</h2>
-</section>
 
-<section>
-
-<a href="http://commons.wikimedia.org/wiki/File:Bright_green_tree_-_Waikato.jpg">Tree image</a> by Floyd Wilde, <a href="http://creativecommons.org/licenses/by-sa/2.0/deed.en">CC-BY-SA</a>.
-<br/><br/>
-<a href="http://commons.wikimedia.org/wiki/File:Soderledskyrkan_brick_wall.jpg">Brick wall image</a> by Håkan Svensson (Xauxa), <a href="http://creativecommons.org/licenses/by-sa/3.0/deed.en">CC-BY-SA</a>
-
-</section>
 			</div>
 
 		</div>

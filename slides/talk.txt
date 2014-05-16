@@ -1,21 +1,26 @@
-(The problem)
+<SLIDE 0>
 
 Hi!  I'm David Turner and I love programming.
 
-Recently, I wanted to sort a list of paths. There was a constraint:
-the paths had to be sorted topologically, so that foo comes before
-foo/bar comes before foo/bar/baz, and nothing comes in between foo and
-the first file inside foo.  ASCII order doesn't quite achieve this,
-because dash comes before slash, so foo-fleem would come after foo,
-but before foo/bar.
+<SLIDE 1>
 
-(The solution, in C).
+Recently, I was hacking on git, and I wanted to sort a list of
+paths. There was a constraint: the paths had to be sorted
+topologically, so that foo comes before foo/bar comes before
+foo/bar/baz, and nothing comes in between foo and the first file
+inside foo.  ASCII order doesn't quite achieve this, because dash
+comes before slash, so foo-fleem would come after foo, but before
+foo/bar.
+
+<SLIDE 2>
 
 This is relatively straightforward to solve -- we just want to reorder
 the alphabet a bit so that slash is second (immediately after zero,
 which is used to indicate end-of-string).  Everything from 1 up to
 slash (which is 47) would move up one to make room. We can do it
 with a couple of if-else statements.
+
+<SLIDE 3>
 
         if (*sa == '/')
             ca = 1;
@@ -24,50 +29,56 @@ with a couple of if-else statements.
         else
             ca = *sa;
 
-(We're not checking for the case that the character is equal to zero,
-because we checked that in the loop condition)
-
 We could also use a lookup table, which is slightly faster.  But it still
 wasn't fast enough; the comparisons were still a hotspot in my code.
-
-As a side note: we could do a Schwartzian transform here; that's where
-you first remap the strings so that they can be directly compared,
-then do the sort. In this case, we would then have to go back and undo
-the remapping.  I decided not to do this because it's
-parallelism-unfriendly, plus the technique I'm about to show you would
-still have improved the remapping process.
-
-(SIMD)
 
 So, what I actually decided to do was to change my program so that I
 didn't need to sort.
 
+<SLIDE 4>
+
 But what I considered first was to use the single instruction multiple
-data instructions that are available on modern processors.  Processors
-store data that they are working on in registers -- these are
-basically your processor's version of variables.  Ordinarily, one
+data instructions that are available on modern processors.  This is
+the crazy-fun way to make code fast.
+
+<SLIDE 5>
+
+Processors store data that they are working on in registers -- these
+are basically your processor's version of variables.  Ordinarily, one
 variable holds one value; on a 64-bit processor, that's a single
 64-bit value.  But with SIMD instructions, a register can be treated
-as an array of independent values.  For example, you could treat 128
-bits as four 32-bit integers, or eight 16-bit words, or sixteen 8-bit
-bytes.  The nice thing about this is that each value in a SIMD
-register stays independent, so if for instance you're adding two
-vectors of bytes, and one of the bytes overflows, it doesn't carry
-into its neighbor.
+as an array of independent values.  
 
-The latest Intel processors have 256-bit SIMD registers, but my
-processor is a bit older and only has 128-bit registers. 128 bits is
-16 bytes, so I can process 16 bytes of my strings at a time.
+<SLIDE 6++>
+For example, you could treat 128 bits as four 32-bit integers, or
+eight 16-bit words, or sixteen 8-bit bytes.  The nice thing about this
+is that each value in a SIMD register stays independent, so if for
+instance you're adding two arrays of bytes, and one of the bytes
+overflows, it doesn't carry into its neighbor.
 
-(dodge/burn)
+So I can process 16 bytes of my strings at a time.
+
+<SLIDE 7>
 
 Because strings are a bit complicated, let's start by walking through
-an example of SIMD with pixels.  Graphics were a pretty common use
-case for SIMD, until GPUs took over.  Imagine we have an image, which
-has 32-bit pixels -- that's 8 bits per color, and 8 bits of padding.
-We want to lighten this image, so we'll add 64 to each channel of
-each pixel.
+an example of SIMD with pixels.
 
+<SLIDE 8>
+
+Imagine we have an image, which has 32-bit pixels -- that's 8 bits per
+color, and 8 bits of padding.  We want to lighten this image, so we'll
+add (say) 40 to each channel of each pixel.
+
+<SLIDE 9>
+Here's the code to do that:
+
+movdqa (%rdi), %xmm0
+paddusb (%rsi), %xmm0
+movdqa %xmm0, (%rdi)
+
+Let's unpack that.
+
+<SLIDE 10>
 So first we'll load four pixels into a register to work on them.  
 
         movdqa (%rdi), %xmm0
@@ -75,143 +86,185 @@ So first we'll load four pixels into a register to work on them.
 To read this, we'll start with mov, which just means copy data.  DQ
 means "double quadword" -- 16 bytes, or 4 pixels.  A means "aligned to
 a 16-byte boundary"; this is faster, so we'll make sure to arrange
-our images this way.  Malloc, by default, returns aligned data anyway.
+our images this way. 
 
-RDI is one of the x86_64's ordinary 64-bit registers.  It's used to
-pass the first argument to a function.  The parentheses mean to get
-data from that address.  In other words, it's just like a pointer 
+RDI is an ordinary 64-bit register.  By convention, it's used to pass
+the first argument to a function.  The parentheses mean to get data
+from that address.  In other words, it's just like a pointer
 dereference.  And xmm0 is the first of the eight SSE registers.
 
 So, we pass a pointer into this function, dereference it, and put
-the result into a register.  Easy.  We'll also need the data we're
-going to use to lighten.  That's just going to be forty twelve times, like so:
+the result into a register.  Easy.  
 
-0x00040404000404040004040400040404
+<SLIDE 11>
 
-Let's say for now that our function takes a second argument, which
-points to this.  That's also nice because it will later let us vary
-the effect -- we could do only the red channel, for instance, with
-something like this -- that's a forty in the four red channels, and
-zeros everywhere else.
+We'll also need the data we're going to use to lighten.  That's just
+going to be forty twelve times, like so:
 
-0x40000000400000004000000040000000
+0x00404040004040400040404000404040
 
-So to get this lightening data, we're going to do exactly the same
-thing as before, but with different registers:
+Let's say that our function takes a second argument, which points to
+this.  That's also nice because it will later let us vary the effect
+-- we could do only the red channel, for instance, with forty in the
+four red channels, and zeros everywhere else.
 
-        movdqa (%rsi), %xmm1
+<SLIDE 12>
 
-Before we had rdi, now we have rsi, which is the second argument to
-a function.  And instead of xmm0 we have xmm1.  Now we want to add
-them together:
+So we're going to add this lightening data right in.
 
-        paddusb %xmm1, %xmm0
+        paddusb (%rsi), %xmm0
 
 To read this, that's P for packed, add, U for unsigned, S for
 saturated, B for bytes.  Saturated means that if we hit the top, 255,
 we don't wrap around to zero again.  That's what we want -- if our
 pixel is already as bright as it can get, then lightening it won't do
-anything.  And now we need to put the pixel back into memory, so we'll
-use
+anything. 
 
-        movdqa %xmm0, (%rdi)
+And where before we had rdi, now we have rsi, which is the second argument to
+the function.
+
+And here's the result.
+<SLIDE 13> 
+
+And of course we need to put the pixel back into memory. 
+
+<SLIDE 14>
 
 That's just the same as the first instruction, with the operands
-swapped.  We've just transformed four pixels in four instructions.
+swapped.  We've just transformed four pixels in three instructions.
 Not bad.
 
-(Constructing if-then-else from AND, XOR, and OR)
+<SLIDE 15>
 
 But our string function didn't just have addition.  It also had an
-if statement.  How do you do an if statement in assembly language?
-You do a comparison, which sets some flags, and then you do a jump --
-a goto -- that's conditional on those flags.  But we can't do that
-with SIMD, because some of our comparisons might be true while others
-are false. We can't both jump and not jump.
+if statement.  
+
+<SLIDE 16>
+
+We're going to look at a simplified case here: just replacing all
+of the slashes with ones.
+
+How do you do an if statement in assembly language?  You do a
+comparison, which sets some flags, and then you do a jump -- a goto --
+that's conditional on those flags.  But we can't do that with SIMD,
+because some of our comparisons might be true while others are
+false. We can't both jump and not jump.
+
+<SLIDE 17>
 
 Instead, we need to get the effect of the if-then-else without any
-jumps.  Here's where we need to do some bitwise arithmetic.  The
-standard approach is to take a mask with ones where the condition is
-true, and zeros everywhere else.  Recall that OR giveth and AND taketh
-away.  You AND the THEN value with the mask, AND the ELSE value with
-the inverse of the mask, and use OR to combine them. Think like a
-dovetail.
+conditional jumps.  Here's where we need to do some bitwise
+arithmetic. I'm going to show this to you visually, because that's
+how I learned it.
 
-Let's implement a piece of our string function that way, considering
-the case of slash -- so, we have some register containing sixteen
-bytes of our string, and we want it to contain 1 only in the bytes
-where it previously contained a slash. 
+<SLIDE 18>
+The standard approach is to take a mask with ones where the condition
+is true, and zeros everywhere else.  Recall that OR giveth and AND
+taketh away.  You AND the THEN value with the mask,
 
+<SLIDE +>
+AND the ELSE value with the inverse of the mask,
+
+[beat]
+
+<SLIDE ++>
+
+and use OR to combine them. Notice that in the first two images in the
+last row, each has black where the other has color; we OR them to
+create a complete image. Think like a dovetail.  
+
+[beat]
+
+Let's implement this piece of our string function that way. So, we
+have some register containing sixteen bytes of our string, and we want
+it to contain 1 only in the bytes where it previously contained a
+slash.
+
+<SLIDE 19>
 Let's assume for now that we have the register xmm7 that holds a
-slash, repeated sixteen times. 
+slash, repeated sixteen times.
 
-0x2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f
+/ / / / / / / / / / / / / / / /
 
 And we'll want a register where each byte is 1, xmm6.
+<SLIDE +>
 
 0x01010101010101010101010101010101
 
 And we'll also want a register xmm5 where each bit is 1 -- bit, not
 byte.
 
+<SLIDE ++>
 0xffffffffffffffffffffffffffffffff
 
 Finally, we'll assume that our string is in xmm0.
+<SLIDE +++>
 
-First, we'll save off a copy of our register, because we're going to
+[beat]
+
+<SLIDE 20>
+First, we'll save off a copy of our string, because we're going to
 clobber it. 
 
     movdqa  %xmm0, %xmm1
 
+[beat]
+<SLIDE 21>
 So now we want to do a bytewise comparison between our register and
 the register with all the slashes.
 
     pcmpeqb %xmm7, %xmm1
 
-That's P for packed, compare, EQ for equality, B for bytes.  Notice
+That's packed, compare, EQ for equality, B for bytes.  Notice
 that it's only got two arguments -- the two things it's comparing.  So
 where does the output go?  It clobbers the second argument.  Good
 thing we made a copy!  The output is a mask.  Any byte where the two
 arguments are equal gets filled up with all ones, and any byte where
-they differ gets filled up with all zeros.  So imagine that we started
-with the string
+they differ gets filled up with all zeros.  
 
-     /foo/bar/example
+<SLIDE 22>
 
-Now our mask would be
-    0xff000000ff000000ff00000000000000
+So started with the string /foo/bar/example, and our mask has ones
+where the slashes were and zeros everywhere else.  
 
-It's got ones where the slashes were and zeros everywhere else.
+[beat]
 
+<SLIDE 23>
 OK so now let's copy that mask.
 
     movdqa %xmm1, %xmm2
 
+[beat]
+
+<SLIDE 23>
 And we'll build the part of the final value that contains the ones.
 Remember that xmm6 contained the one-bytes:
 
     pand %xmm6, %xmm2
 
-So we use P for packed AND, which, since AND operates on a bit-by-bit
-basis is just the same as ordinary AND.  But all of the operations on
-the SIMD registers start with P.
+So we use AND.
 
 Now xmm2 has one-bytes where the slashes were.
     0xoi000000oi000000oi00000000000000
 
 Now we need to build the other part of the final value, so we need the
-opposite of the mask.  There's no SIMD "not" instruction, so we use
-xor with xmm5, our register full of 1-bits. xor with 1 inverts, so
-that's what we want:
+opposite of the mask. 
+
+
+<SLIDE 24>
+There's no SSE "not" instruction, so we use xor with xmm5, our
+register full of 1-bits. xor with 1 inverts, so that's what we want:
 
     pxor %xmm5, %xmm1
 
+<SLIDE 25>
 We'll AND that with our original string, which was in xmm0
+
     pand %xmm1, %xmm0
 
-So now xmm0 has
-    oo666f6foo626172oo6578616d706c65
+So now xmm0 has zeros where the slashes were.
 
+<SLIDE 26>
 You'll notice that xmm0 has holes (zeros) exactly where xmm2 has
 notches (ones).  That's what we wanted.  So we can use OR to
 put them back together
@@ -220,19 +273,24 @@ put them back together
 
 And we've got what we wanted -- the slashes replaced by ones.
 
-    01666f6f01626172016578616d706c65
+    1foo1bar1example
 
 We only used seven instructions to process sixteen bytes.   Not bad!  
 
-(Special considerations for 0-terminated strings: PCMPISTRI/M)
+(Special considerations for 0-terminated strings: PCMPISTRI)
 
 The one wrinkle in all this is that we're using C-style,
-zero-terminated strings.  So if we're comparing two strings,
-we need to know when either of them end.  Conveniently, Intel
-has given us an instruction that does precisely that:
+zero-terminated strings.  
+
+<SLIDE 27>
+
+So if we're comparing two strings, we need to know when either of them
+end.  Conveniently, Intel has given us an instruction that does
+precisely that:
 
 PCMPISTRI
 
+<SLIDE 28>
 That's packed compare implicit (meaning zero-terminated) strings,
 returning index.  Basically, this is an instruction designed
 explicitly for strcmp.  It's also got some bells and whistles which
@@ -240,29 +298,66 @@ let you use it for more advanced things, like checking which
 characters are in a set of ranges, or doing substring searching.  But
 we're going to focus on the strcmp case.
 
+<SLIDE 29>
 The idea is that we want to find out the index of the first
 difference, but only if that difference is before the first zero in
 either string; and at the same time we want to find out if either
 string has a zero in it.  Conveniently, P CMP I STR I does this all
 for us.  It puts the index of the first real difference into the rcx
-register.  By real here I mean "before a zero", so inside the actual
-strings.  Then it sets some flags: the carry flag if there are any
-real differences, and the zero and sign flags if there were any zeros
-in the first or second argument.  In our case, any of these flags
-should get us into the routine which tells us which string is greater.
-And if none of them are set, then we can just move on to the next
+register. 
+
+ By real here I mean "before a zero", so inside the actual strings.
+Then it sets some flags: the carry flag if there are any real
+differences, and the zero and sign flags if there were any zeros in
+the first or second argument.  In our case, any of these flags should
+get us into the routine which tells us which string is greater.  And
+if none of them are set, then we can just move on to the next
 sixteen-byte block of our string.
 
+<SLIDE 30>
 The difference routine is actually a bit complicated.  That's because
-we have our values in these SIMD registers, but we need to extract the
+we have our values in these SSE registers, but we need to extract the
 single byte where the first difference is.  We have the index of that
 byte.  And it turns out that there's not an instruction that does that
-for you.  My first thought was a variable whole-register shift, but
-that also doesn't exist, somewhat surprisingly.  
+for you.  
 
+<SLIDE 31>
 So after some searching, I found a thread where the glibc folks
 figured out the simple way to do it, which is with the shuffle
-instruction.  The shuffle instruction lets you use one of your SIMD
+instruction.  Unfortunately, I don't have time to show you
+the details, but if you look up the slides online and keep
+watching past the credits, you'll find them.
+
+The and/or thing, and the shuffle trick, are the sort of weird
+creativity that Intel's wacky instruction set really encourages.  So
+it really is a perversely pleasurable way to program, because you end
+up with this tremendously efficient code, but you have to really fight
+for it.
+
+--- (time permitting)
+You can actually get even deeper when you consider the timing of
+instructions: what happens when one instruction depends on data
+computed by another instruction.
+
+Maybe it has to wait, and in that gap while it's waiting, you could
+start processing the next chunk of pixels.  Now you're interleaving
+the two computations, and you start to run out of registers, so you
+have to be clever about reusing registers both inside a computation,
+and between computations.  
+---
+
+It's really a bit sick, but quite a lot of fun.  And for my string
+sorting code, the end result was about 30% faster than the lookup
+table approach.
+
+<SLIDE 32>
+Thank you.
+
+<SLIDE 33>
+(credits)
+
+<SLIDE 34>
+The shuffle instruction lets you use one of your SSE
 registers as a map for which bytes you want to pull out of another
 register.  And you can set the high bit to say that you just want to
 fill in zeros.  So what we're going to do is fill in zeros everywhere
@@ -270,46 +365,30 @@ except the bottom element, and we'll fill in the bottom element with
 the desired element.  Then we can copy it to an ordinary register, and
 do the comparison that way.
 
+<SLIDE 35>
 Recall that we already had a register full of all one bits, xmm5, which
 means that the high bit is one, which is perfect everywhere except the
 bottom element.  Also recall that unsigned addition, ordinarily, wraps
 around, so if we add one to the bottom element, then it will wrap
-around to zero.  Actually, we're going to add one to the index, and
-then add that to the bottom element.
+around to zero.  Actually, we're going to add one to the index.
 
+<SLIDE +>
         add $1, %rcx
 
-Then we move it into the bottom of a SIMD register -- the rest of
+Then we move it into the bottom of a SSE register -- the rest of
 the register is automatically zeroed out.
-
+<SLIDE ++>
         movq %rcx, %xmm4
 
 And we'll add in our register full of ones.
-
+<SLIDE +++>
         paddb %xmm5, %xmm4
 
 And finally we do the shuffle.
-
+<SLIDE ++++>
         pshufb %xmm4, %xmm0
 
 And the result of all this is when we move the bottom of xmm0 into
 some ordinary register, we get only the byte we wanted.
-
+<SLIDE +++++>
         movq %xmm0, %rax
-
-This is the sort of weird creativity that Intel's wacky instruction
-set really encourages.  So it really is a perversely pleasurable way
-to program, because you end up with this tremendously efficient code,
-but you have to really fight for it.  You can actually get even deeper
-when you consider the timing of instructions: what happens when one
-instruction depends on data computed by another instruction.  Maybe it
-has to wait, and in that gap while it's waiting, you could start
-processing the next chunk of pixels.  Now you're interleaving the two
-computations, and you start to run out of registers, so you have to be
-clever about reusing registers both inside a computation, and between
-computations.  It's really a bit sick, but quite a lot of fun.  And
-for my string sorting code, the end result, without even trying any
-of the clever interleaving, was about 30% faster than the lookup table
-approach.
-
-Thank you.
