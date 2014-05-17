@@ -47,7 +47,7 @@
 					<h3>SSE instructions for string operations</h3>
 					<p>
 by David Turner<br/>
-              <a href="https://github.com/novalis/toposort-madness">https://github.com/novalis/thinking-with-pcmpistri</a>
+	      <a href="https://github.com/novalis/toposort-madness">https://github.com/novalis/thinking-with-pcmpistri</a>
 					</p>
 				</section>
 
@@ -123,8 +123,7 @@ sixteen bytes<br/>
 <section>
 <tt style="float:left;text-align:left">
 movdqa (%rdi), %xmm0<br/>
-movdqa (%rsi), %xmm1<br/>
-paddusb %xmm1, %xmm0<br/>
+paddusb (%rsi), %xmm0<br/>
 movdqa %xmm0, (%rdi)
 </tt>
 </section>
@@ -237,7 +236,9 @@ xmm0<br/>
 
 
 <section>
+<tt>
     movdqa  %xmm0, %xmm1
+</tt>
 </section>
 <section>
 
@@ -349,6 +350,9 @@ carry flag and zero flag get set<br/>
 
 <section>
 <h2>Thank you</h2>
+<p>
+	      <a href="https://github.com/novalis/toposort-madness">https://github.com/novalis/thinking-with-pcmpistri</a>
+</p>
 </section>
 
 <section>

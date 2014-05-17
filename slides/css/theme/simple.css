@@ -28,6 +28,17 @@ body {
 
 .reveal tt {
   font-family: "Courier", serif;
+  font-weight: bold;
+  font-size: 150%;
+  line-height: 2.5ex;
+}
+
+.reveal code {
+  font-family: "Courier", serif;
+  font-weight: bold;
+  font-size: 200%;
+  letter-spacing: 0.00em;
+  line-height: 2ex;
 }
 
 ::selection {

@@ -17,10 +17,10 @@ foo/bar.
 This is relatively straightforward to solve -- we just want to reorder
 the alphabet a bit so that slash is second (immediately after zero,
 which is used to indicate end-of-string).  Everything from 1 up to
-slash (which is 47) would move up one to make room. We can do it
-with a couple of if-else statements.
+slash (which is 47) would move up one to make room.
 
 <SLIDE 3>
+We can do it with a couple of if-else statements.
 
         if (*sa == '/')
             ca = 1;
@@ -32,7 +32,7 @@ with a couple of if-else statements.
 We could also use a lookup table, which is slightly faster.  But it still
 wasn't fast enough; the comparisons were still a hotspot in my code.
 
-So, what I actually decided to do was to change my program so that I
+So, what I actually decided to do was to change my code so that I
 didn't need to sort.
 
 <SLIDE 4>
@@ -65,9 +65,10 @@ an example of SIMD with pixels.
 
 <SLIDE 8>
 
-Imagine we have an image, which has 32-bit pixels -- that's 8 bits per
-color, and 8 bits of padding.  We want to lighten this image, so we'll
-add (say) 40 to each channel of each pixel.
+Imagine we have an image, which has 32-bit pixels -- that's 8 bits
+each for red, green, and blue, and 8 bits of padding.  We want to
+lighten this image, so we'll add (say) 40 to each channel of each
+pixel.
 
 <SLIDE 9>
 Here's the code to do that:
@@ -137,18 +138,18 @@ Not bad.
 <SLIDE 15>
 
 But our string function didn't just have addition.  It also had an
-if statement.  
+if statement.
 
 <SLIDE 16>
 
 We're going to look at a simplified case here: just replacing all
 of the slashes with ones.
 
-How do you do an if statement in assembly language?  You do a
-comparison, which sets some flags, and then you do a jump -- a goto --
-that's conditional on those flags.  But we can't do that with SIMD,
-because some of our comparisons might be true while others are
-false. We can't both jump and not jump.
+How does your processor do an if statement?  You do a comparison,
+which sets some flags, and then you do a jump -- a goto -- that's
+conditional on those flags.  But we can't do that with SIMD, because
+some of our comparisons might be true while others are false. We can't
+both jump and not jump.
 
 <SLIDE 17>
 
@@ -160,7 +161,8 @@ how I learned it.
 <SLIDE 18>
 The standard approach is to take a mask with ones where the condition
 is true, and zeros everywhere else.  Recall that OR giveth and AND
-taketh away.  You AND the THEN value with the mask,
+taketh away.  You AND the THEN value with the mask.  AND with zeros
+gives you zeros; AND with all-ones does nothing.
 
 <SLIDE +>
 AND the ELSE value with the inverse of the mask,
@@ -169,9 +171,10 @@ AND the ELSE value with the inverse of the mask,
 
 <SLIDE ++>
 
-and use OR to combine them. Notice that in the first two images in the
-last row, each has black where the other has color; we OR them to
-create a complete image. Think like a dovetail.  
+and use OR to combine them. Notice that in the operands to the OR,
+each has black, zeros, where the other has color.  We OR them to
+create a complete image.  ORing anything with zero just gives you that
+thing back. Think like a dovetail.
 
 [beat]
 
@@ -215,12 +218,12 @@ the register with all the slashes.
 
     pcmpeqb %xmm7, %xmm1
 
-That's packed, compare, EQ for equality, B for bytes.  Notice
-that it's only got two arguments -- the two things it's comparing.  So
+That's packed, compare, EQ for equality, B for bytes.  Notice that
+it's only got two arguments -- the two things it's comparing.  So
 where does the output go?  It clobbers the second argument.  Good
-thing we made a copy!  The output is a mask.  Any byte where the two
-arguments are equal gets filled up with all ones, and any byte where
-they differ gets filled up with all zeros.  
+thing we made a copy!  The output is one of those masks we wanted.
+Any byte where the two arguments are equal gets filled up with all
+ones, and any byte where they differ gets filled up with all zeros.
 
 <SLIDE 22>
 
@@ -245,11 +248,10 @@ Remember that xmm6 contained the one-bytes:
 So we use AND.
 
 Now xmm2 has one-bytes where the slashes were.
-    0xoi000000oi000000oi00000000000000
+    0x[01]000000[01]000000[01]00000000000000
 
 Now we need to build the other part of the final value, so we need the
-opposite of the mask. 
-
+opposite of the mask.
 
 <SLIDE 24>
 There's no SSE "not" instruction, so we use xor with xmm5, our
@@ -275,9 +277,9 @@ And we've got what we wanted -- the slashes replaced by ones.
 
     1foo1bar1example
 
-We only used seven instructions to process sixteen bytes.   Not bad!  
+We only used seven instructions to process sixteen bytes.   Not bad!
 
-(Special considerations for 0-terminated strings: PCMPISTRI)
+[beat]
 
 The one wrinkle in all this is that we're using C-style,
 zero-terminated strings.  
@@ -294,9 +296,8 @@ PCMPISTRI
 That's packed compare implicit (meaning zero-terminated) strings,
 returning index.  Basically, this is an instruction designed
 explicitly for strcmp.  It's also got some bells and whistles which
-let you use it for more advanced things, like checking which
-characters are in a set of ranges, or doing substring searching.  But
-we're going to focus on the strcmp case.
+let you use it for more advanced things.  But we're going to focus on
+the strcmp case.
 
 <SLIDE 29>
 The idea is that we want to find out the index of the first
@@ -306,7 +307,7 @@ string has a zero in it.  Conveniently, P CMP I STR I does this all
 for us.  It puts the index of the first real difference into the rcx
 register. 
 
- By real here I mean "before a zero", so inside the actual strings.
+By real here I mean "before a zero", so inside the actual strings.
 Then it sets some flags: the carry flag if there are any real
 differences, and the zero and sign flags if there were any zeros in
 the first or second argument.  In our case, any of these flags should
@@ -322,14 +323,14 @@ byte.  And it turns out that there's not an instruction that does that
 for you.  
 
 <SLIDE 31>
-So after some searching, I found a thread where the glibc folks
-figured out the simple way to do it, which is with the shuffle
-instruction.  Unfortunately, I don't have time to show you
-the details, but if you look up the slides online and keep
-watching past the credits, you'll find them.
+So after some searching, I found a thread where the glibc
+folks figured out the simple way to do it, which is with the shuffle
+instruction.  Unfortunately, I don't have time to show you the
+details, but if you're interested, look up these slides online and
+keep watching past the credits.
 
 The and/or thing, and the shuffle trick, are the sort of weird
-creativity that Intel's wacky instruction set really encourages.  So
+creativity that Intel's wacky instruction set encourages.  So
 it really is a perversely pleasurable way to program, because you end
 up with this tremendously efficient code, but you have to really fight
 for it.
