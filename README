@@ -1,4 +1,3 @@
-An experiment in topological sorting and SSE.
-
-Not really useful for anything, except generating funny errors
-in valgrind.
+This is the materials for the talk I gave at !!Con 2014, "Now You're
+Thinking with PCMPISTRI!"  It includes some code I wrote while
+testing this stuff, and my slides.

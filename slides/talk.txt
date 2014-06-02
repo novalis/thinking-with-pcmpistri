@@ -46,8 +46,9 @@ the crazy-fun way to make code fast.
 Processors store data that they are working on in registers -- these
 are basically your processor's version of variables.  Ordinarily, one
 variable holds one value; on a 64-bit processor, that's a single
-64-bit value.  But with SIMD instructions, a register can be treated
-as an array of independent values.  
+64-bit value.  But with SIMD ("sim dee") instructions, a register can
+be treated as an array of independent values.  Intel's implementation
+of SIMD is called SSE.
 
 <SLIDE 6++>
 For example, you could treat 128 bits as four 32-bit integers, or
@@ -91,8 +92,8 @@ our images this way.
 
 RDI is an ordinary 64-bit register.  By convention, it's used to pass
 the first argument to a function.  The parentheses mean to get data
-from that address.  In other words, it's just like a pointer
-dereference.  And xmm0 is the first of the eight SSE registers.
+from that address.  Just like a pointer dereference.  And xmm0 is the
+first of the eight SSE registers.
 
 So, we pass a pointer into this function, dereference it, and put
 the result into a register.  Easy.  
@@ -162,7 +163,7 @@ how I learned it.
 The standard approach is to take a mask with ones where the condition
 is true, and zeros everywhere else.  Recall that OR giveth and AND
 taketh away.  You AND the THEN value with the mask.  AND with zeros
-gives you zeros; AND with all-ones does nothing.
+gives you zeros; AND with all-ones changes nothing.
 
 <SLIDE +>
 AND the ELSE value with the inverse of the mask,
@@ -277,7 +278,7 @@ And we've got what we wanted -- the slashes replaced by ones.
 
     1foo1bar1example
 
-We only used seven instructions to process sixteen bytes.   Not bad!
+We only used seven instructions to process sixteen bytes.   Zoom!
 
 [beat]
 
@@ -310,10 +311,10 @@ register.
 By real here I mean "before a zero", so inside the actual strings.
 Then it sets some flags: the carry flag if there are any real
 differences, and the zero and sign flags if there were any zeros in
-the first or second argument.  In our case, any of these flags should
-get us into the routine which tells us which string is greater.  And
-if none of them are set, then we can just move on to the next
-sixteen-byte block of our string.
+the arguments.  In our case, any of these flags should get us into the
+routine which tells us which string is greater.  And if none of them
+are set, then we can just move on to the next sixteen-byte block of
+our string.
 
 <SLIDE 30>
 The difference routine is actually a bit complicated.  That's because
